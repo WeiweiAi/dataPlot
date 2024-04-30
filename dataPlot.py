@@ -1,5 +1,6 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.ticker import PercentFormatter
 
 def subplots_ajdust(fig_cfg, **subtitle_kwargs):
     """Create a figure and a set of subplots with the specified configuration.
@@ -88,8 +89,12 @@ def plot_line2D(axs, plot_cfg, line_cfg, save_fig):
             Scale of the y-axis.
         - xticks: 1D array-like
             List of ticks for the x-axis.
+        - xticks_percentage: bool, default=False
+            If True, the x-axis will be formatted as a percentage.
         - yticks: 1D array-like
             List of ticks for the y-axis.
+        - yticks_percentage: bool, default=False
+            If True, the y-axis will be formatted as a percentage.
         - xticks_kwargs: dict, default={}
             Additional properties for the xticks.
             https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.set_xticks.html
@@ -133,6 +138,8 @@ def plot_line2D(axs, plot_cfg, line_cfg, save_fig):
             Label of the right y-axis.
         - ylim_right: tuple, default=False
             Tuple containing the lower and upper limits of the right y-axis.
+        _ rightYAxis_percentage: bool, default=False
+            If True, the right y-axis will be formatted as a percentage.
         - color: str, default='b'
             Color of the line, such as 'b', 'g', 'r', 'c', 'm', 'y', 'k', 'w'.
         - linestyle: str, default='-'
@@ -207,6 +214,10 @@ def plot_line2D(axs, plot_cfg, line_cfg, save_fig):
             ax.set_xticks(plot_data['xticks'],**plot_data.get('xticks_kwargs', {}))
         if plot_data.get('yticks', None):
             ax.set_yticks(plot_data['yticks'],**plot_data.get('yticks_kwargs', {}))
+        if plot_data.get('xticks_percentage', False):
+            ax.xaxis.set_major_formatter(PercentFormatter())
+        if plot_data.get('yticks_percentage', False):
+            ax.yaxis.set_major_formatter(PercentFormatter())
         if 'title' in plot_data:
             ax.set_title(plot_data['title'],y=plot_data.get('title_y', 1.0))                    
         if plot_data.get('show_grid', False):
@@ -220,6 +231,8 @@ def plot_line2D(axs, plot_cfg, line_cfg, save_fig):
                 ax2.set_ylabel(line_cfg[line_id]['rightYAxis'])
                 if line_cfg[line_id].get('ylim_right', False):
                     ax2.set_ylim(line_cfg[line_id]['ylim_right'])
+                if line_cfg[line_id].get('rightYAxis_percentage', False):
+                    ax2.yaxis.set_major_formatter(PercentFormatter())
                 handles[line_id],=ax2.plot(xdata, ydata, color=line_cfg[line_id].get('color', 'b'), linestyle=line_cfg[line_id].get('linestyle', '-'),
                     marker=line_cfg[line_id].get('marker'), markevery=line_cfg[line_id].get('markevery', 1),
                     label=line_cfg[line_id].get('label'), **line_cfg[line_id].get('line_kwargs', {}))
@@ -279,11 +292,13 @@ if __name__ == '__main__':
     line_cfg[7] = { 'xdata': (filename_BG_50_sugar,'tms'), 'ydata':(filename_BG_50_sugar,'Ii'),
                     'color': 'b', 'linestyle': '--',  'label': 'Bond graph @50mV'}
     line_cfg[8] = { 'xdata': (filename_BG_150_sugar,'tms'), 'ydata':(filename_BG_150_sugar,'Ii'),
-                    'color': 'r', 'linestyle': '--',  'label': 'Bond graph @-150mV'}
+                    'color': 'r', 'linestyle': '--',  'label': 'Bond graph @-150mV' }
+    line_cfg[9] = { 'xdata': (filename_BG_150_sugar,'tms'), 'ydata':(filename_BG_150_sugar,'Ii'),
+                    'color': 'm', 'linestyle': '--',  'label': 'Bond graph @-150mV', 'rightYAxis': '%', 'rightYAxis_percentage': True, 'ylim_right': [-200, 100]}
 
     plot_cfg[1] = {'ylabel': 'i (nA)', 'xlabel': 'Time (ms)','show_grid': 'both', 'grid_axis': 'both',  'ylim': [-500, 1500], 'xlim': [0, 80],
                     'line': [1,2,3,4], 'legend': [1,2,3,4], 'title': '(a) Before the addition of sugar','title_y': -0.25}
     plot_cfg[2] = {'ylabel': 'i (nA)', 'xlabel': 'Time (ms)','show_grid': 'both', 'grid_axis': 'both',  'ylim': [-500, 400], 'xlim': [0, 80],
-                    'line': [5,6,7,8], 'legend': [5,6,7,8], 'title': '(b) After the addition of sugar','title_y': -0.25}
+                    'line': [5,6,7,8,9], 'legend': [5,6,7,8,9], 'title': '(b) After the addition of sugar','title_y': -0.25}
 
     plot_line2D(axs, plot_cfg, line_cfg, save_fig)
