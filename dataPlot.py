@@ -218,6 +218,9 @@ def plot_line2D(axs, plot_cfg, line_cfg, save_fig):
             ax.xaxis.set_major_formatter(PercentFormatter())
         if plot_data.get('yticks_percentage', False):
             ax.yaxis.set_major_formatter(PercentFormatter())
+        [ymin,ymax] =ax.get_ylim() 
+        if 'xspan' in plot_data and 'yspan' in plot_data: 
+           ax.fill_between(plot_data['xspan'], ymin, ymax, where=plot_data['yspan'] > 0, **plot_data.get('fill_properties', {}))
         if 'title' in plot_data:
             ax.set_title(plot_data['title'],y=plot_data.get('title_y', 1.0))                    
         if plot_data.get('show_grid', False):
