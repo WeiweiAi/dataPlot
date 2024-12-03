@@ -36,10 +36,11 @@ def subplots_ajdust(fig_cfg, **subtitle_kwargs):
             The amount of width reserved for space between subplots, expressed as a fraction of the average axis width.
         - hspace: float, default=0.2
             The amount of height reserved for space between subplots, expressed as a fraction of the average axis height.
-
-    **subtitle_kwargs : dict
-        Additional keyword arguments for the suptitle function.
-        https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.suptitle.html
+        - legend_kwargs: dict
+            https://matplotlib.org/stable/api/_as_gen/matplotlib.figure.Figure.legend.html
+        - subtitle_kwargs : dict
+            Additional keyword arguments for the suptitle function.
+            https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.suptitle.html
 
     Returns
     -------
@@ -60,12 +61,12 @@ def subplots_ajdust(fig_cfg, **subtitle_kwargs):
     plt.rcParams['figure.dpi'] = 300
     plt.rcParams['font.size'] = fig_cfg.get('fontsize', 10)
     fig, axs = plt.subplots(rows,cols,figsize=(width, height),squeeze=False)
-    fig.suptitle(fig_cfg.get('fig_title', ''), y=fig_cfg.get('title_y', 0.98),  **subtitle_kwargs)
+    fig.suptitle(fig_cfg.get('fig_title', ''), y=fig_cfg.get('title_y', 0.98),  **fig_cfg.get('subtitle_kwargs', {}))
     fig.subplots_adjust(left=left, bottom=bottom, right=right, top=top, wspace=wspace, hspace=hspace)
 
     return fig, axs
 
-def plot_line2D(axs, plot_cfg, line_cfg, save_fig):
+def plot_line2D(fig_cfg, plot_cfg, line_cfg):
     """Plot the data on the specified axes as lines.
 
     Parameters
@@ -167,37 +168,48 @@ def plot_line2D(axs, plot_cfg, line_cfg, save_fig):
             Name of the saved figure.
 
     """
-
+    fig, axs=subplots_ajdust(fig_cfg)
     # Read data from the files first to avoid reading the same file multiple times
     # If the same file is used for multiple lines, read the file once and use the data for all the lines
     data_files = {}
     data_file_names = {}
     nfiles = 0
     for line_id, line_data in line_cfg.items():
-        if line_data['xdata'][0] not in data_file_names:
-            # add the file to the data_files dictionary
-            nfiles += 1
-            data_files[nfiles] = pd.read_csv(line_data['xdata'][0])
-            data_file_names[nfiles] = line_data['xdata'][0]
-            line_data['xdata_array'] = data_files[nfiles][line_data['xdata'][1]]
+        if 'xdata' in line_data:
+            if  line_data['xdata'][0] not in data_file_names:
+                # add the file to the data_files dictionary
+                nfiles += 1
+                data_files[nfiles] = pd.read_csv(line_data['xdata'][0])
+                data_file_names[nfiles] = line_data['xdata'][0]
+                line_data['xdata_array'] = data_files[nfiles][line_data['xdata'][1]]
+            else:
+                # find the file in the data_files dictionary and use the data
+                for k, v in data_file_names.items():
+                    if v == line_data['xdata'][0]:
+                        line_data['xdata_array'] = data_files[k][line_data['xdata'][1]]
+                        break
+        elif 'xdata_array' in line_data:
+            pass
         else:
-            # find the file in the data_files dictionary and use the data
-            for k, v in data_file_names.items():
-                if v == line_data['xdata'][0]:
-                    line_data['xdata_array'] = data_files[k][line_data['xdata'][1]]
-                    break
-        if line_data['ydata'][0] not in data_file_names:
-            # add the file to the data_files dictionary
-            nfiles += 1
-            data_file_names[nfiles] = line_data['ydata'][0]
-            data_files[nfiles] = pd.read_csv(line_data['ydata'][0])
-            line_data['ydata_array'] = data_files[nfiles][line_data['ydata'][1]]
+            raise ValueError('xdata or xdata_array is missing in line_cfg')
+            
+        if 'ydata' in line_data:
+            if line_data['ydata'][0] not in data_file_names:
+                # add the file to the data_files dictionary
+                nfiles += 1
+                data_file_names[nfiles] = line_data['ydata'][0]
+                data_files[nfiles] = pd.read_csv(line_data['ydata'][0])
+                line_data['ydata_array'] = data_files[nfiles][line_data['ydata'][1]]
+            else:
+                # find the file in the data_files dictionary and use the data
+                for k, v in data_file_names.items():
+                    if v == line_data['ydata'][0]:
+                        line_data['ydata_array'] = data_files[k][line_data['ydata'][1]]
+                        break
+        elif 'ydata_array' in line_data:
+            pass
         else:
-            # find the file in the data_files dictionary and use the data
-            for k, v in data_file_names.items():
-                if v == line_data['ydata'][0]:
-                    line_data['ydata_array'] = data_files[k][line_data['ydata'][1]]
-                    break
+            raise ValueError('ydata or ydata_array is missing in line_cfg')
 
     for plot_id, plot_data in plot_cfg.items():
         ax = axs.flatten()[plot_id-1]
@@ -241,18 +253,27 @@ def plot_line2D(axs, plot_cfg, line_cfg, save_fig):
                 handles[line_id],=ax.plot(xdata, ydata, color=line_cfg[line_id].get('color', 'b'), linestyle=line_cfg[line_id].get('linestyle', '-'),
                     marker=line_cfg[line_id].get('marker'), markevery=line_cfg[line_id].get('markevery', 1),
                     label=line_cfg[line_id].get('label'), **line_cfg[line_id].get('line_kwargs', {}))
+        [ymin,ymax] =ax.get_ylim() 
+        if 'xspan' in plot_data and 'yspan' in plot_data: 
+           ax.fill_between(plot_data['xspan'], ymin, ymax, where=plot_data['yspan'] > 0, **plot_data.get('fill_properties', {}))
+        ax.set_ylim([ymin,ymax])
         # Only show the legend specified in the plot_cfg
         if 'legend' in plot_data:
             handles_list = [handles[i] for i in plot_data['legend']]
             ax.legend(handles=handles_list,loc=plot_data.get('legends_position', 'best'), ncol=plot_data.get('lgdncol', 1))
             if 'bbox_to_anchor' in plot_data:
                 ax.legend( bbox_to_anchor=plot_data.get('bbox_to_anchor'))
-    
-    if save_fig:
-        full_path = save_fig.get('file_path', './') + save_fig.get('filename', 'new_fig') + '.' + save_fig.get('fig_format', 'png')
-        plt.savefig(full_path)
-        if save_fig.get('fig_format', 'png') != 'png':
-            full_path_png = save_fig.get('file_path', './') + save_fig.get('filename', 'new_fig') + '.png'
+    if fig_cfg.get('legend_id', False):
+        # Collect lines and labels for figure legend
+        lines_labels = [axs.flatten()[legend_id-1].get_legend_handles_labels() for legend_id in fig_cfg['legend_id']]
+        lines, labels = [sum(lol, []) for lol in zip(*lines_labels)]
+        # Create figure legend
+        fig.legend(lines, labels, **fig_cfg.get('legend_kwargs', {}))
+
+    full_path = fig_cfg.get('file_path', './') + fig_cfg.get('filename', 'new_fig') + '.' + fig_cfg.get('fig_format', 'png')
+    plt.savefig(full_path)
+    if fig_cfg.get('fig_format', 'png') != 'png':
+            full_path_png = fig_cfg.get('file_path', './') + fig_cfg.get('filename', 'new_fig') + '.png'
             plt.savefig(full_path_png)
     plt.show()
 
@@ -270,11 +291,9 @@ if __name__ == '__main__':
     filename_BG_50_sugar = data_path+'report_task_SGLT1_BG_step_fig10_50mV_sugar_post.csv'
 
 
-    subtitle_kwargs={}
     fig_cfg = {'num_rows': 1, 'num_cols': 2, 'width':8, 'height':4, 'fig_title': None, 'title_y': 0.98, 'fontsize': 8, 
                'left': 0.1, 'bottom': 0.25, 'right': 0.95, 'top': 0.95, 'wspace': 0.25, 'hspace': 0.2}
-    fig, axs= subplots_ajdust(fig_cfg, **subtitle_kwargs)
-
+    
     plot_cfg = {}
     line_cfg = {}
 
@@ -302,4 +321,4 @@ if __name__ == '__main__':
     plot_cfg[2] = {'ylabel': 'i (nA)', 'xlabel': 'Time (ms)','show_grid': 'both', 'grid_axis': 'both',  'ylim': [-500, 400], 'xlim': [0, 80],
                     'line': [5,6,7,8,9], 'legend': [5,6,7,8,9], 'title': '(b) After the addition of sugar','title_y': -0.25}
 
-    plot_line2D(axs, plot_cfg, line_cfg, save_fig)
+    plot_line2D(fig_cfg, plot_cfg, line_cfg)

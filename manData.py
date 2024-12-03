@@ -10,6 +10,7 @@ def combine_csv_files(new_csv_file, csv_files):
     csv_files: list of tuples
         A list of tuples where each tuple contains the name of a csv file and the line numbers that will be copied to the new csv file.
         The line numbers are 0-based.
+        The tuple includes the filename, start line number, the end line number, and the step size.
         Example:
         [('file1.csv', 0, 10), ('file2.csv', 5, 15, 2)]
     
@@ -19,7 +20,10 @@ def combine_csv_files(new_csv_file, csv_files):
     for csv_file in csv_files:
         csv_file_name = csv_file[0]
         line_start = csv_file[1]
-        line_end = csv_file[2]
+        if len(csv_file) == 3:
+            line_end = csv_file[2]
+        else:
+            line_end = -1
         if len(csv_file) == 4:
             line_step = csv_file[3]
         else:
@@ -27,7 +31,7 @@ def combine_csv_files(new_csv_file, csv_files):
         with open(csv_file_name, 'r') as f:
             lines = f.readlines()
             with open(new_csv_file, 'a') as file:
-                if len(lines) < line_end:
+                if len(lines) < line_end or line_end == -1:
                     line_end = len(lines)-1
                 if line_step>1:
                     file.writelines(lines[line_start:line_end+1:line_step])
