@@ -56,7 +56,8 @@ def subplots_ajdust(fig_cfg, **subtitle_kwargs):
     wspace = fig_cfg.get('wspace', 0.2)     
     hspace = fig_cfg.get('hspace', 0.2)    
     rows, cols = fig_cfg.get('num_rows', 1), fig_cfg.get('num_cols', 1)
-    width, height = fig_cfg.get('width', 6), fig_cfg.get('height', 9)    
+    width, height = fig_cfg.get('width', 6), fig_cfg.get('height', 9) 
+    plt.rcParams['figure.dpi'] = 300
     plt.rcParams['font.size'] = fig_cfg.get('fontsize', 10)
     fig, axs = plt.subplots(rows,cols,figsize=(width, height),squeeze=False)
     fig.suptitle(fig_cfg.get('fig_title', ''), y=fig_cfg.get('title_y', 0.98),  **subtitle_kwargs)
