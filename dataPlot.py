@@ -1,6 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.ticker import PercentFormatter
+import numpy as np
 
 def subplots_ajdust(fig_cfg, **subtitle_kwargs):
     """Create a figure and a set of subplots with the specified configuration.
@@ -41,6 +42,12 @@ def subplots_ajdust(fig_cfg, **subtitle_kwargs):
         - subtitle_kwargs : dict
             Additional keyword arguments for the suptitle function.
             https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.suptitle.html
+        - fig_format: str, default='png'
+            Format of the saved figure, such as 'png', 'pdf', 'svg', 'eps'.
+        - file_path: str, default='./'
+            Path of the saved figure.
+        - filename: str, default='new_fig'
+            Name of the saved figure.
 
     Returns
     -------
@@ -70,8 +77,8 @@ def plot_line2D(fig_cfg, plot_cfg, line_cfg):
 
     Parameters
     ----------
-    axs : an array of Axes objects
-        The array of axes objects.
+    fig_cfg : dict
+        A dictionary containing the configuration of the figure and subplots.
     plot_cfg : dict
         A dictionary containing the configuration of the plots
         {'plot_id': dict, ...}
@@ -154,17 +161,7 @@ def plot_line2D(fig_cfg, plot_cfg, line_cfg):
             Label of the line in the legend.
         - line_kwargs: dict, default={}
             Additional properties for the line.
-            https://matplotlib.org/stable/api/_as_gen/matplotlib.lines.Line2D.html
-
-    save_fig : dict
-        A dictionary containing the configuration of saving the figure.
-        The dictionary may contain the following keys:
-        - fig_format: str, default='png'
-            Format of the saved figure, such as 'png', 'pdf', 'svg', 'eps'.
-        - file_path: str, default='./'
-            Path of the saved figure.
-        - filename: str, default='new_fig'
-            Name of the saved figure.
+            https://matplotlib.org/stable/api/_as_gen/matplotlib.lines.Line2D.html       
 
     """
     fig, axs=subplots_ajdust(fig_cfg)
@@ -276,10 +273,122 @@ def plot_line2D(fig_cfg, plot_cfg, line_cfg):
             plt.savefig(full_path_png)
     plt.show()
 
+def plot_bar(fig_cfg, plot_cfg):
+    """Plot the data on the specified axes as bars.
+
+    Parameters
+    ----------
+    fig_cfg : dict
+        A dictionary containing the configuration of the figure and subplots.
+    plot_cfg : dict
+        A dictionary containing the configuration of the plots
+        {'plot_id': dict, ...}
+        The dictionary may contain the following keys:
+        - direction: 'vertical', 'horizontal', default='vertical'
+            The direction of the bars.
+        - layout: 'stacked', 'grouped', default='grouped'
+            The layout of the bars.
+        - species: list, mandatory
+        - dataset: dict, mandatory
+            A dictionary containing the data for the bars.
+            The dictionary may contain the following keys:
+            {group1: {'data': list, 'bar_label': *kwargs, 'bar_kwargs': *kwargs},
+                group2: {'data': list, 'bar_label': *kwargs, 'bar_kwargs': *kwargs}, ...}
+
+            bar_kwargs: dict, default={}
+            Additional properties for the bars.
+            https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.bar.html
+            https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.barh.html
+
+            bar_label: dict, default=None
+            Additional properties for the bar labels.
+            https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.bar_label.html
+
+        - bar_width: float, default=0.8
+            The width of the bars for 'vertical' bar;
+            The height of the bars for 'horizontal' bar.
+        - bar_bottom: float or array-like, default=0
+            The y-coordinate(s) of the  bottom side of the bars for 'vertical' bar;
+            The x-coordinate(s) of the  left side of the bars for 'horizontal' bar.
+        - axlabel: str
+            Label of the x-axis for 'horizontal' bar; 
+            Label of the y-axis for 'vertical' bar.
+        - axlim: tuple
+            Tuple containing the lower and upper limits of the x-axis for 'horizontal' bar;
+            Tuple containing the lower and upper limits of the y-axis for 'vertical' bar.
+        - axticks_kwargs: dict, default={}
+            Additional properties for the xticks.
+            https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.set_xticks.html
+        - legends_position: str, default='best'
+            Position of the legend.
+            https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.legend.html
+        - lgdncol: int, default=1
+            Number of columns in the legend.
+        - bbox_to_anchor: tuple, default=None
+            The bbox that the legend will be anchored.
+            2-tuple (x, y), or 4-tuple of floats (x, y, width, height).
+        - title: str, default=None
+            Title of the plot.
+        - title_y: float, default=1.0
+            The y location of the text in figure coordinates.
+    """
+    fig, axs=subplots_ajdust(fig_cfg)
+    for plot_id, plot_data in plot_cfg.items():
+        ax = axs.flatten()[plot_id-1]
+        species = plot_data['species']
+        dataset = plot_data['dataset']
+        label_pos = np.arange(len(species))
+        group_size = len(dataset)
+        total_space = plot_data.get('bar_width',0.8)  # Total space allocated for bars (can be adjusted)
+        if plot_data.get('direction', 'vertical') == 'vertical':
+            bar_func = ax.bar
+            bar_width = total_space / group_size
+            ax.set_xticks(label_pos + bar_width * (group_size - 1) / 2, species, **plot_data.get('axticks_kwargs', {}))
+            if 'axlabel' in plot_data:
+                ax.set_xlabel(plot_data['axlabel'])
+            if 'axlim' in plot_data:
+                ax.set_xlim(plot_data['axlim'])
+        elif plot_data.get('direction', 'vertical') == 'horizontal':
+            bar_func = ax.barh
+            bar_width = total_space
+            ax.set_yticks(label_pos + bar_width * (group_size - 1) / 2, species, **plot_data.get('axticks_kwargs', {}))
+            if 'axlabel' in plot_data:
+                ax.set_ylabel(plot_data['axlabel'])
+            if 'axlim' in plot_data:
+                ax.set_ylim(plot_data['axlim'])
+        else:
+            raise ValueError('direction should be vertical or horizontal')
+        if plot_data.get('layout', 'grouped') == 'grouped':
+            for i, (group, group_data) in enumerate(dataset.items()):
+                bar_c=bar_func(label_pos + i*bar_width, group_data['data'], bar_width,
+                         bottom=plot_data.get('bar_bottom', 0), label=group, **group_data.get('bar_kwargs', {}))
+                if 'bar_label' in group_data:
+                    ax.bar_label(bar_c, **group_data['bar_label'])
+        elif plot_data.get('layout', 'grouped') == 'stacked':
+            bottom = plot_data.get('bar_bottom', 0)
+            for i, (group, group_data) in enumerate(dataset.items()):
+                bar_c=bar_func(label_pos, group_data['data'], bar_width,
+                         bottom=bottom, label=group, **group_data.get('bar_kwargs', {}))
+                bottom += group_data['data']
+                if 'bar_label' in group_data:
+                    ax.bar_label(bar_c, **group_data['bar_label'])   
+        if 'title' in plot_data:
+            ax.set_title(plot_data['title'],y=plot_data.get('title_y', 1.0))
+        if 'legends_position' in plot_data:
+            ax.legend(loc=plot_data.get('legends_position', 'best'), ncol=plot_data.get('lgdncol', 1))
+            if 'bbox_to_anchor' in plot_data:
+                ax.legend( bbox_to_anchor=plot_data.get('bbox_to_anchor'))
+    
+    full_path = fig_cfg.get('file_path', './') + fig_cfg.get('filename', 'new_fig') + '.' + fig_cfg.get('fig_format', 'png')
+    plt.savefig(full_path)
+    if fig_cfg.get('fig_format', 'png') != 'png':
+            full_path_png = fig_cfg.get('file_path', './') + fig_cfg.get('filename', 'new_fig') + '.png'
+            plt.savefig(full_path_png)
+    plt.show()      
+
 if __name__ == '__main__':
 
     data_path='./data/'
-    save_fig = {'fig_format': 'png', 'file_path': data_path, 'filename': 'BG_fit_fig10'}
     filename_50 = data_path+'Fig10_Parent1992_50mV.csv'
     filename_150 = data_path+'Fig10_Parent1992_150mV.csv'
     filename_BG_150 = data_path+'report_task_SGLT1_BG_step_fig10_150mV_post.csv'
@@ -291,7 +400,8 @@ if __name__ == '__main__':
 
 
     fig_cfg = {'num_rows': 1, 'num_cols': 2, 'width':8, 'height':4, 'fig_title': None, 'title_y': 0.98, 'fontsize': 8, 
-               'left': 0.1, 'bottom': 0.25, 'right': 0.95, 'top': 0.95, 'wspace': 0.25, 'hspace': 0.2}
+               'left': 0.1, 'bottom': 0.25, 'right': 0.95, 'top': 0.95, 'wspace': 0.25, 'hspace': 0.2,
+               'fig_format': 'png', 'file_path': data_path, 'filename': 'BG_fit_fig10'}
     
     plot_cfg = {}
     line_cfg = {}
